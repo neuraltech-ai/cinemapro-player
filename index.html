@@ -1,1 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="referrer" content="origin">
+    <title>Mycima | CinemaPro Player</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            background-color: #000000;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            padding: 8px 10px;
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            z-index: 40;
+        }
+        .movie-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 48%;
+        }
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .shield-btn {
+            background: rgba(16, 185, 129, 0.22);
+            color: #34d399;
+            border: 1px solid #10b981;
+            padding: 5px 8px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .shield-btn.unlocked {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border-color: #f59e0b;
+        }
+        .fs-btn {
+            background: #0284c7;
+            color: #ffffff;
+            border: 1px solid #38bdf8;
+            padding: 5px 9px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .servers-bar {
+            display: flex;
+            gap: 6px;
+            padding: 6px 10px;
+            background: #090d16;
+            overflow-x: auto;
+            border-bottom: 1px solid #1e293b;
+            z-index: 40;
+        }
+        .srv-btn {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #334155;
+            padding: 6px 11px;
+            border-radius: 7px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .srv-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+        }
+        .player-wrapper {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+            display: block;
+        }
+        .smart-ad-shield {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 54px;
+            z-index: 35;
+            background: transparent;
+        }
+        .smart-ad-shield.active {
+            display: block;
+        }
+        .shield-toast {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.94);
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            z-index: 38;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            white-space: nowrap;
+        }
+        .shield-toast.show {
+            opacity: 1;
+        }
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 5px;
+            padding: 6px 8px;
+            background: #0f172a;
+            border-top: 1px solid #1e293b;
+            overflow-x: auto;
+            z-index: 40;
+        }
+        .ctrl-btn {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 6px 9px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ctrl-btn.primary {
+            background: rgba(2, 132, 199, 0.25);
+            color: #38bdf8;
+            border-color: #0284c7;
+        }
+        .footer-status {
+            padding: 4px 10px;
+            background: #090d16;
+            color: #94a3b8;
+            font-size: 10.5px;
+            text-align: center;
+            border-top: 1px solid #1e293b;
+            z-index: 40;
+        }
+        body.landscape-cinema .header,
+        body.landscape-cinema .servers-bar,
+        body.landscape-cinema .controls-bar,
+        body.landscape-cinema .footer-status {
+            display: none !important;
+        }
+        body.landscape-cinema .player-wrapper {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 100vh !important;
+            height: 100vw !important;
+            transform: translate(-50%, -50%) rotate(90deg) !important;
+            z-index: 9999 !important;
+            background: #000 !important;
+        }
+        .exit-fs-btn {
+            display: none;
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 10000;
+            background: rgba(15, 23, 42, 0.88);
+            color: #f8fafc;
+            border: 1px solid #38bdf8;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        body.landscape-cinema .exit-fs-btn {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <button class="exit-fs-btn" onclick="toggleCinemaFullscreen()">✕ إنهاء التكبير</button>
 
+    <div class="header">
+        <div class="movie-title" id="movieTitleEl">🎬 Mycima</div>
+        <div class="top-actions">
+            <button id="shieldBtn" class="shield-btn" onclick="toggleSmartShield()">🛡️ الدرع: مفعل</button>
+            <button class="fs-btn" onclick="toggleCinemaFullscreen()">🔲 تكبير بالعرض</button>
+        </div>
+    </div>
+
+    <div class="servers-bar">
+        <button id="btnVidlink" class="srv-btn active" onclick="loadServer(this, 'vidlink')">🚀 سيرفر VidLink المترجم FHD</button>
+        <button id="btnVixsrc" class="srv-btn" onclick="loadServer(this, 'vixsrc')">⚡ سيرفر VixSrc السريع FHD</button>
+    </div>
+
+    <div class="player-wrapper">
+        <div id="shieldToast" class="shield-toast">🛡️ تم منع نقرة الإعلان!</div>
+        <div id="smartShield" class="smart-ad-shield" onclick="onShieldTap()"></div>
+        <div id="mediaMount" style="width:100%;height:100%;"></div>
+    </div>
+
+    <div class="controls-bar">
+        <button class="ctrl-btn primary" onclick="unlockFor4Seconds()">🔓 فتح اللمس 4 ثوانٍ</button>
+        <button class="ctrl-btn" onclick="toggleCinemaFullscreen()">🔲 تكبير الشاشة</button>
+        <button class="ctrl-btn" onclick="reloadStream()">🔄 تحديث المشغل</button>
+        <button class="ctrl-btn" onclick="closePlayer()">🔙 عودة للبوت</button>
+    </div>
+
+    <div class="footer-status" id="statusHint">
+        🛡️ درع منع إعلانات الشاشة يتفعّل تلقائياً — للتحكم والترجمة (CC) استخدم الشريط السفلي للفيديو.
+    </div>
+
+    <script>
+        window.open = function() { return null; };
+        const params = new URLSearchParams(window.location.search);
+        const movieId = (params.get("id") || "").replace(/[^0-9]/g, "");
+        const movieTitle = params.get("title") || ("فيلم #" + movieId);
+
+        document.title = movieTitle;
+        document.getElementById("movieTitleEl").textContent = "🎬 " + movieTitle;
+
+        const servers = {
+            vidlink: `https://vidlink.pro/movie/${movieId}?primaryColor=0284c7&autoplay=true`,
+            vixsrc: `https://vixsrc.to/movie/${movieId}?primaryColor=0284c7&autoplay=true`
+        };
+
+        let activeKey = "vidlink";
+        let shieldActive = false;
+        let toastTimer = null;
+
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            try {
+                if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
+            } catch (e) {}
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById("shieldToast");
+            el.textContent = msg;
+            el.classList.add("show");
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+        }
+
+        function updateShieldUI() {
+            const shield = document.getElementById("smartShield");
+            const btn = document.getElementById("shieldBtn");
+            if (shieldActive) {
+                shield.classList.add("active");
+                btn.textContent = "🛡️ الدرع: مفعل";
+                btn.classList.remove("unlocked");
+            } else {
+                shield.classList.remove("active");
+                btn.textContent = "⚠️ الدرع متوقف";
+                btn.classList.add("unlocked");
+            }
+        }
+
+        function onShieldTap() {
+            showToast("🛡️ تم حجب الإعلان! استخدم الشريط السفلي أو اضغط (🔓 فتح اللمس 4 ثوانٍ)");
+        }
+
+        function toggleSmartShield() {
+            shieldActive = !shieldActive;
+            updateShieldUI();
+        }
+
+        function unlockFor4Seconds() {
+            shieldActive = false;
+            updateShieldUI();
+            showToast("🔓 اللمس مفتوح لمدة 4 ثوانٍ، ثم سيعود الدرع تلقائياً");
+            setTimeout(() => {
+                shieldActive = true;
+                updateShieldUI();
+                showToast("🛡️ أُعيد تفعيل درع منع الإعلانات تلقائياً");
+            }, 4500);
+        }
+
+        function loadServer(btnEl, key) {
+            if (!movieId) {
+                document.getElementById("mediaMount").innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100%;color:#f87171;'>معرف الفيلم غير صالح</div>";
+                return;
+            }
+            activeKey = key;
+            document.querySelectorAll(".srv-btn").forEach(b => b.classList.remove("active"));
+            if (btnEl) btnEl.classList.add("active");
+
+            document.getElementById("mediaMount").innerHTML = `
+                <iframe
+                    src="${servers[key]}"
+                    referrerpolicy="origin"
+                    allowfullscreen="true"
+                    webkitallowfullscreen="true"
+                    mozallowfullscreen="true"
+                    allow="autoplay *; fullscreen *; picture-in-picture *; encrypted-media *">
+                </iframe>
+            `;
+
+            shieldActive = false;
+            updateShieldUI();
+            setTimeout(() => {
+                shieldActive = true;
+                updateShieldUI();
+                document.getElementById("statusHint").innerHTML = "🛡️ <b>وسط الشاشة محمي الآن ضد الإعلانات!</b> استخدم الشريط السفلي للترجمة (CC) والإيقاف أو اضغط (🔓 فتح اللمس 4 ثوانٍ).";
+            }, 3500);
+        }
+
+        function reloadStream() {
+            loadServer(document.querySelector(".srv-btn.active"), activeKey);
+            showToast("🔄 جاري تحديث المشغل...");
+        }
+
+        function closePlayer() {
+            if (tg && typeof tg.close === "function") tg.close();
+            else window.history.back();
+        }
+
+        async function toggleCinemaFullscreen() {
+            const isLandscape = document.body.classList.toggle("landscape-cinema");
+            try {
+                if (isLandscape) {
+                    if (tg && typeof tg.requestFullscreen === "function") tg.requestFullscreen();
+                    else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+                } else {
+                    if (tg && typeof tg.exitFullscreen === "function") tg.exitFullscreen();
+                    else if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+                }
+            } catch (e) {}
+        }
+
+        loadServer(document.getElementById("btnVidlink"), "vidlink");
+    </script>
+</body>
+</html>
